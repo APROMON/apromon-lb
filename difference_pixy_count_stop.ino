@@ -11,6 +11,7 @@ const int buttonPin = 26;
 int in2 = 3;
 int in1 = 4;
 const int buzzerPin = 1;
+const int led = 5;
 
 Servo servo;
 boolean isStarted = false;
