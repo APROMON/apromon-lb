@@ -1,4 +1,5 @@
-#include <Pixy2.h>
+
+lm mk k m #include <Pixy2.h>
 #include <Servo.h>
 
 Pixy2 pixy;
