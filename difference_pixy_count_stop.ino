@@ -1,5 +1,4 @@
 
-sdasasd
 #include <Pixy2.h>
 #include <Servo.h>
 
