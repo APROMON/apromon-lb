@@ -2,16 +2,14 @@
 #include <Servo.h>
 
 Pixy2 pixy;
-const int leftTrigPin = 10;
-const int leftEchoPin = 9;
-const int rightTrigPin = 8;
-const int rightEchoPin = 7;
+const int leftTrigPin = 38;
+const int leftEchoPin = 39;
+const int rightTrigPin = 36;
+const int rightEchoPin = 37;
 const int servoPin = 11;
 const int buttonPin = 26;
 int in2 = 3;
 int in1 = 4;
-const int buzzerPin = 1;
-const int led = 5;
 
 Servo servo;
 boolean isStarted = false;
@@ -19,7 +17,7 @@ int orangeCount = 0;
 int blueCount = 0;
 unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
-const unsigned long blockDelay = 1000;  // Delay in milliseconds after detecting a block
+const unsigned long blockDelay = 2000;  // Delay in milliseconds after detecting a block
 unsigned long stopTime = 0;
 
 int getDistance(int trigPin, int echoPin) {
@@ -41,7 +39,6 @@ void setup() {
   pinMode(rightTrigPin, OUTPUT);
   pinMode(rightEchoPin, INPUT);
   pinMode(buttonPin, INPUT_PULLUP);  // Use internal pull-up resistor for the button
-  pinMode(buzzerPin, OUTPUT);        // Set buzzer pin as an output
   servo.attach(servoPin);
   pinMode(in2, OUTPUT);
   pinMode(in1, OUTPUT);
@@ -112,17 +109,17 @@ void loop() {
   Serial.print('\n');
 
   int mappedValue;
-  if (difference < -30) {
-    mappedValue = 130;
-  } else if (difference > 30) {
-    mappedValue = 50;
-  } else if (difference > -0 && difference < 0) {
+  if (difference < -45) {
+    mappedValue = 125;
+  } else if (difference > 45) {
+    mappedValue = 55;
+  } else if (difference > -10 && difference < 10) {
     mappedValue = 90;
   } else {
-    mappedValue = map(difference, -60, 60, 130, 50);
+    mappedValue = map(difference, -45, 45, 125, 55);
   }
 
   servo.write(mappedValue);
 
-  delay(100);
+  delay(50);
 }
