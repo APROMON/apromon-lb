@@ -17,7 +17,7 @@ int orangeCount = 0;
 int blueCount = 0;
 unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
-const unsigned long blockDelay = 2000;  // Delay in milliseconds after detecting a block
+const unsigned long blockDelay = 2000;  
 unsigned long stopTime = 0;
 
 int getDistance(int trigPin, int echoPin) {
@@ -38,11 +38,11 @@ void setup() {
   pinMode(leftEchoPin, INPUT);
   pinMode(rightTrigPin, OUTPUT);
   pinMode(rightEchoPin, INPUT);
-  pinMode(buttonPin, INPUT_PULLUP);  // Use internal pull-up resistor for the button
+  pinMode(buttonPin, INPUT_PULLUP);  
   servo.attach(servoPin);
   pinMode(in2, OUTPUT);
   pinMode(in1, OUTPUT);
-  Serial.begin(9600);  // Initialize serial communication
+  Serial.begin(9600);  
   pixy.init();
 }
 
@@ -51,7 +51,7 @@ void loop() {
     if (digitalRead(buttonPin) == LOW) {
       isStarted = true;
     }
-    return;  // Skip the rest of the loop until the button is pressed
+    return;  
   }
 
   pixy.ccc.getBlocks();
