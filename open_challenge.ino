@@ -1,6 +1,7 @@
 #include <Pixy2.h>
 #include <Servo.h>
 
+
 Pixy2 pixy;
 const int leftTrigPin = 38;
 const int leftEchoPin = 39;
@@ -11,6 +12,7 @@ const int buttonPin = 26;
 int in2 = 3;
 int in1 = 4;
 
+
 Servo servo;
 boolean isStarted = false;
 int orangeCount = 0;
@@ -19,6 +21,7 @@ unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
 const unsigned long blockDelay = 2000;  // Delay in milliseconds after detecting a block
 unsigned long stopTime = 0;
+
 
 int getDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
@@ -32,6 +35,8 @@ int getDistance(int trigPin, int echoPin) {
 
   return distance;
 }
+
+
 
 void setup() {
   pinMode(leftTrigPin, OUTPUT);
