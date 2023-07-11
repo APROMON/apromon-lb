@@ -10,6 +10,7 @@ const int servoPin = 11;
 const int buttonPin = 26;
 int in2 = 3;
 int in1 = 4;
+int i = 0;
 
 Servo servo;
 boolean isStarted = false;
@@ -47,28 +48,34 @@ void setup() {
 }
 
 void followBlock(int signature) {
-  int servoAngle;
+  int mappedValue = 90;  // Default position set to 90 degrees
+
   if (signature == 4) {
     // Green block, calculate top right corner's x-coordinate
     int topRightX = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width;
-    int targetX = 50; // Target x-coordinate for the green block
+    int targetX = 20; // Target x-coordinate for the green block
     int error = targetX - topRightX;
-    if (error < -50) {
-      servoAngle = 60;
-    } else {
-      servoAngle = map(error, -50, 50, 60, 120);
+    if (error > 0 || error < 20) {
+      mappedValue = 90;
+    } else if (error >= -140 || error <= 0) {
+      mappedValue = map(error, -140, 0, 125, 100);
+    } else if (error < -140) {
+      mappedValue = 125;
     }
-  } else {
+  } else if (signature == 1) {
     // Red block, calculate top left corner's x-coordinate
-    int targetX = 270; // Target x-coordinate for the red block
+    int targetX = 300; // Target x-coordinate for the red block
     int error = targetX - pixy.ccc.blocks[i].m_x;
-    if (error > 50) {
-      servoAngle = 120;
-    } else {
-      servoAngle = map(error, -50, 50, 60, 120);
+    if (error > -20 || error < 0) {
+      mappedValue = 90;
+    } else if (error >= 0 || error <= 140) {
+      mappedValue = map(error, 0, 140, 80, 55);
+    } else if (error > 140) {
+      mappedValue = 55;
     }
   }
-  servo.write(servoAngle);
+  
+  servo.write(mappedValue);  // Set servo position based on mappedValue
 }
 
 void loop() {
@@ -115,6 +122,10 @@ void loop() {
         redGreenArea[redGreenCount] = pixy.ccc.blocks[i].m_width * pixy.ccc.blocks[i].m_height;
         redGreenCenter[redGreenCount] = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
         redGreenCount++;
+        //Serial.print("redGreenArea [ ");
+        //Serial.print(redGreenCount);
+        //Serial.print(" ] = ");
+        //Serial.println(pixy.ccc.blocks[i].m_width * pixy.ccc.blocks[i].m_height);
       }
     }
   }
@@ -130,28 +141,27 @@ void loop() {
       }
     }
   }
+  
+  int mappedValue;  // Declare mappedValue outside of the if/else blocks
 
   if (redGreenCount == 1) {
-    if (redGreenArea[0] > 6000) {
+    if (redGreenArea[0] > 700) {
       followBlock(pixy.ccc.blocks[i].m_signature);
     } else {
-      int servoAngle = map(redGreenCenter[0], 0, 320, 60, 120);
-      servo.write(servoAngle);
+      mappedValue = map(redGreenCenter[0], 0, 320, 55, 125);
     }
   } else if (redGreenCount == 2) {
     if (redGreenArea[0] > redGreenArea[1]) {
-      if (redGreenArea[0] > 6000) {
+      if (redGreenArea[0] > 700) {
         followBlock(pixy.ccc.blocks[i].m_signature);
       } else {
-        int servoAngle = map(redGreenCenter[0], 0, 320, 60, 120);
-        servo.write(servoAngle);
+        mappedValue = map(redGreenCenter[0], 0, 320, 55, 125);
       }
     } else {
-      if (redGreenArea[1] > 6000) {
+      if (redGreenArea[1] > 700) {
         followBlock(pixy.ccc.blocks[i].m_signature);
       } else {
-        int servoAngle = map(redGreenCenter[1], 0, 320, 60, 120);
-        servo.write(servoAngle);
+        mappedValue = map(redGreenCenter[1], 0, 320, 55, 125);
       }
     }
   } else {
@@ -160,8 +170,6 @@ void loop() {
     int leftDistance = getDistance(leftTrigPin, leftEchoPin);
     int rightDistance = getDistance(rightTrigPin, rightEchoPin);
     int difference = leftDistance - rightDistance;
-
-    int mappedValue;
     if (difference < -45) {
       mappedValue = 125;
     } else if (difference > 45) {
@@ -171,9 +179,9 @@ void loop() {
     } else {
       mappedValue = map(difference, -45, 45, 125, 55);
     }
-
-    servo.write(mappedValue);
   }
+
+  servo.write(mappedValue);  // Set servo position based on mappedValue
 
   delay(50);
 }
