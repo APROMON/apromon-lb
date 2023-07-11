@@ -10,7 +10,6 @@ const int servoPin = 11;
 const int buttonPin = 26;
 int in2 = 3;
 int in1 = 4;
-int i = 0;
 
 Servo servo;
 boolean isStarted = false;
@@ -47,37 +46,6 @@ void setup() {
   pixy.init();
 }
 
-void followBlock(int signature) {
-  int mappedValue = 90;  // Default position set to 90 degrees
-
-  if (signature == 4) {
-    // Green block, calculate top right corner's x-coordinate
-    int topRightX = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width;
-    int targetX = 20; // Target x-coordinate for the green block
-    int error = targetX - topRightX;
-    if (error > 0 || error < 20) {
-      mappedValue = 90;
-    } else if (error >= -140 || error <= 0) {
-      mappedValue = map(error, -140, 0, 125, 100);
-    } else if (error < -140) {
-      mappedValue = 125;
-    }
-  } else if (signature == 1) {
-    // Red block, calculate top left corner's x-coordinate
-    int targetX = 300; // Target x-coordinate for the red block
-    int error = targetX - pixy.ccc.blocks[i].m_x;
-    if (error > -20 || error < 0) {
-      mappedValue = 90;
-    } else if (error >= 0 || error <= 140) {
-      mappedValue = map(error, 0, 140, 80, 55);
-    } else if (error > 140) {
-      mappedValue = 55;
-    }
-  }
-  
-  servo.write(mappedValue);  // Set servo position based on mappedValue
-}
-
 void loop() {
   if (!isStarted) {
     if (digitalRead(buttonPin) == LOW) {
@@ -88,11 +56,6 @@ void loop() {
 
   pixy.ccc.getBlocks();
   int numBlocks = pixy.ccc.numBlocks;
-
-  // Variables to track red/green blocks
-  int redGreenCount = 0;
-  int redGreenArea[2] = {0, 0};
-  int redGreenCenter[2] = {0, 0};
 
   for (int i = 0; i < numBlocks; i++) {
     if (pixy.ccc.blocks[i].m_signature == 2) {
@@ -115,73 +78,48 @@ void loop() {
         Serial.println(blueCount);
         Serial.print('\n');
       }
-    } else if (pixy.ccc.blocks[i].m_signature == 1 || pixy.ccc.blocks[i].m_signature == 4) {
-      // Red or green block detected
-      if (redGreenCount < 2) {
-        // Store area and center of the block
-        redGreenArea[redGreenCount] = pixy.ccc.blocks[i].m_width * pixy.ccc.blocks[i].m_height;
-        redGreenCenter[redGreenCount] = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
-        redGreenCount++;
-        //Serial.print("redGreenArea [ ");
-        //Serial.print(redGreenCount);
-        //Serial.print(" ] = ");
-        //Serial.println(pixy.ccc.blocks[i].m_width * pixy.ccc.blocks[i].m_height);
-      }
     }
   }
 
-  if (orangeCount >= 12 || blueCount >= 12) {
-    if (stopTime == 0) {
-      stopTime = millis() + 2000;
-    } else {
-      if (millis() >= stopTime) {
-        digitalWrite(in1, LOW);
-        digitalWrite(in2, LOW);
-        delay(60000);
-      }
-    }
-  }
-  
-  int mappedValue;  // Declare mappedValue outside of the if/else blocks
-
-  if (redGreenCount == 1) {
-    if (redGreenArea[0] > 700) {
-      followBlock(pixy.ccc.blocks[i].m_signature);
-    } else {
-      mappedValue = map(redGreenCenter[0], 0, 320, 55, 125);
-    }
-  } else if (redGreenCount == 2) {
-    if (redGreenArea[0] > redGreenArea[1]) {
-      if (redGreenArea[0] > 700) {
-        followBlock(pixy.ccc.blocks[i].m_signature);
-      } else {
-        mappedValue = map(redGreenCenter[0], 0, 320, 55, 125);
-      }
-    } else {
-      if (redGreenArea[1] > 700) {
-        followBlock(pixy.ccc.blocks[i].m_signature);
-      } else {
-        mappedValue = map(redGreenCenter[1], 0, 320, 55, 125);
-      }
-    }
+ if (orangeCount >= 12 || blueCount >= 12) {
+  if (stopTime == 0) {
+    stopTime = millis() + 2000;
   } else {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    int leftDistance = getDistance(leftTrigPin, leftEchoPin);
-    int rightDistance = getDistance(rightTrigPin, rightEchoPin);
-    int difference = leftDistance - rightDistance;
-    if (difference < -45) {
-      mappedValue = 125;
-    } else if (difference > 45) {
-      mappedValue = 55;
-    } else if (difference > -10 && difference < 10) {
-      mappedValue = 90;
-    } else {
-      mappedValue = map(difference, -45, 45, 125, 55);
+    if (millis() >= stopTime) {
+      digitalWrite(in1, LOW);
+      digitalWrite(in2, LOW);
+      delay(60000);
     }
   }
+ }
 
-  servo.write(mappedValue);  // Set servo position based on mappedValue
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  int leftDistance = getDistance(leftTrigPin, leftEchoPin);
+  int rightDistance = getDistance(rightTrigPin, rightEchoPin);
+  int difference = leftDistance - rightDistance;
+
+  Serial.print("Left Distance: ");
+  Serial.print(leftDistance);
+  Serial.print(" cm, Right Distance: ");
+  Serial.print(rightDistance);
+  Serial.print(" cm, Difference: ");
+  Serial.print(difference);
+  Serial.println(" cm");
+  Serial.print('\n');
+
+  int mappedValue;
+  if (difference < -45) {
+    mappedValue = 125;
+  } else if (difference > 45) {
+    mappedValue = 55;
+  } else if (difference > -10 && difference < 10) {
+    mappedValue = 90;
+  } else {
+    mappedValue = map(difference, -45, 45, 125, 55);
+  }
+
+  servo.write(mappedValue);
 
   delay(50);
 }
