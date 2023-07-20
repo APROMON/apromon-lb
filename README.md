@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-  
+
 <body>
   <h1>Introducing APROMON's Arduino Self-Driving Car</h1>
   <p>Greetings, fellow tech enthusiasts and robotics enthusiasts!</p>
