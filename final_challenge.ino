@@ -100,6 +100,8 @@ void setup() {
   pinMode(leftEchoPin, INPUT);
   pinMode(rightTrigPin, OUTPUT);
   pinMode(rightEchoPin, INPUT);
+  pinMode(frontTrigPin, OUTPUT);
+  pinMode(frontEchoPin, INPUT);
   pinMode(buttonPin, INPUT_PULLUP);  // Use internal pull-up resistor for the button
   servo.attach(servoPin);
   pinMode(in2, OUTPUT);
@@ -214,7 +216,7 @@ void loop() {
         followCenter(4);
       }
     }
-  } else if (direction == 1 && frontDistance < 7) {
+  } else if (direction == 1 && frontDistance < 12) {
     detectedBlock = false;
     centeredBlock = false;
 
@@ -224,7 +226,7 @@ void loop() {
       digitalWrite(in1, LOW);
       digitalWrite(in2, HIGH);
       setMotorSpeed(100);
-      servo.write(75);
+      servo.write(55);
       for (int i = 0; i < numBlocks; i++) {
         if (pixy.ccc.blocks[i].m_signature == 4) {
           detectedBlock = true;
@@ -241,7 +243,7 @@ void loop() {
         }
       }
       if (greenCenter > 210) {
-        servo.write(65);
+        servo.write(75);
       } else {
         servo.write(90);
         centeredBlock = true;
