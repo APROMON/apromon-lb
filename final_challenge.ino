@@ -19,13 +19,14 @@ const int enablePin = 5;
 const unsigned long blockDelay = 4000;  // Delay in milliseconds after detecting a block
 
 int leftDistance, rightDistance, frontDistance;
-int redCenter, greenCenter, topRightX, topLeftX;
+int redCenter, greenCenter, topRightX, topLeftX, Center;
 boolean isStarted = false;
 boolean detectedBlock = false;
 boolean centeredBlock = false;
 boolean foundOrange = false;
 boolean foundBlue = false;
 int direction = 0;
+int signature = 0;
 int orangeCount = 0;
 int blueCount = 0;
 unsigned long previousOrangeBlockTime = 0;
@@ -76,20 +77,20 @@ void followCenter(int signature) {
   int servoAngle;
 
   if (signature == 1) {
-    if (leftDistance < 5) {
+    if (leftDistance < 8) {
       servoAngle = 125;
-    } else if (rightDistance < 5) {
+    } else if (rightDistance < 8) {
       servoAngle = 55;
     } else {
-      servoAngle = map(redCenter, 0, 320, 55, 125);
+      servoAngle = map(redCenter, 0, 330, 55, 125);
     }
   } else {
-    if (leftDistance < 5) {
+    if (leftDistance < 8) {
       servoAngle = 125;
-    } else if (rightDistance < 5) {
+    } else if (rightDistance < 8) {
       servoAngle = 55;
     } else {
-      servoAngle = map(greenCenter, 0, 320, 55, 125);
+      servoAngle = map(greenCenter, 0, 330, 55, 125);
     }
   }
   servo.write(servoAngle);
@@ -144,27 +145,29 @@ void loop() {
   int redGreenCount = 0;
   int redArea = 0;
   int greenArea = 0;
+  int lowSpeed = 0;
+
 
   for (int i = 0; i < numBlocks; i++) {
     int blockSignature = pixy.ccc.blocks[i].m_signature;
     int blockHeight = pixy.ccc.blocks[i].m_y + pixy.ccc.blocks[i].m_height;
     
     if (blockSignature == 2 && blockHeight > 100) {
+      lowSpeed = 1;
       unsigned long currentOrangeBlockTime = millis();
       int orangeDelay = currentOrangeBlockTime - previousOrangeBlockTime;
       if (orangeDelay > blockDelay) {
         orangeCount++;
         previousOrangeBlockTime = currentOrangeBlockTime;
       }
-      foundOrange = true;
     } else if (blockSignature == 6 && blockHeight > 100) {
+      lowSpeed = 1;
       unsigned long currentBlueBlockTime = millis();
       int blueDelay = currentBlueBlockTime - previousBlueBlockTime;
       if (blueDelay > blockDelay) {
         blueCount++;
         previousBlueBlockTime = currentBlueBlockTime;
       }
-      foundBlue = true;
     } else if (blockSignature == 1 && blockHeight > 100) {
       redArea = pixy.ccc.blocks[i].m_width * pixy.ccc.blocks[i].m_height;
       redCenter = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
@@ -175,14 +178,6 @@ void loop() {
       greenCenter = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
       topLeftX = pixy.ccc.blocks[i].m_x;
       redGreenCount++;
-    }
-  }
-
-  if (direction == 0) {
-    if (foundOrange) {
-      direction = 1;
-    } else if (foundBlue){
-      direction = -1;
     }
   }
 
@@ -202,21 +197,23 @@ void loop() {
   if (redGreenCount > 0) {
     setMotorSpeed(100);
     if (redArea > greenArea) {
-      if (redArea > 1000) {
-        setMotorSpeed(200);
+      if (redArea > 2000) {
+        setMotorSpeed(150);
         followBlock(1);
+        direction = 1;
       } else {
         followCenter(1);
       }
     } else {
-      if (greenArea > 1000) {
-        setMotorSpeed(200);
+      if (greenArea > 2000) {
+        setMotorSpeed(150);
         followBlock(4);
+        direction = 4;
       } else {
         followCenter(4);
       }
     }
-  } else if (direction == 1 && frontDistance < 12) {
+  } else if (direction == 4 && frontDistance < 15) {
     detectedBlock = false;
     centeredBlock = false;
 
@@ -226,7 +223,7 @@ void loop() {
       digitalWrite(in1, LOW);
       digitalWrite(in2, HIGH);
       setMotorSpeed(100);
-      servo.write(55);
+      servo.write(65);
       for (int i = 0; i < numBlocks; i++) {
         if (pixy.ccc.blocks[i].m_signature == 4) {
           detectedBlock = true;
@@ -242,7 +239,7 @@ void loop() {
           greenCenter = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
         }
       }
-      if (greenCenter > 210) {
+      if (greenCenter > 200) {
         servo.write(75);
       } else {
         servo.write(90);
@@ -250,8 +247,46 @@ void loop() {
         break;
       }
     }
+  } else if (direction == 1 && frontDistance < 15) {
+    detectedBlock = false;
+    centeredBlock = false;
+
+    while (!detectedBlock) {
+      pixy.ccc.getBlocks();
+      int numBlocks = pixy.ccc.numBlocks;
+      digitalWrite(in1, LOW);
+      digitalWrite(in2, HIGH);
+      setMotorSpeed(100);
+      servo.write(115);
+      for (int i = 0; i < numBlocks; i++) {
+        if (pixy.ccc.blocks[i].m_signature == 1) {
+          detectedBlock = true;
+          break;
+        }
+      }
+    }
+    while (!centeredBlock) {
+      pixy.ccc.getBlocks();
+      int numBlocks = pixy.ccc.numBlocks;
+      for (int i = 0; i < numBlocks; i++) {
+        if (pixy.ccc.blocks[i].m_signature == 1) {
+          redCenter = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width / 2;
+        }
+      }
+      if (redCenter > 120) {
+        servo.write(105);
+      } else {
+        servo.write(90);
+        centeredBlock = true;
+        break;
+      }
+    }
   } else {
-    setMotorSpeed(100);
+    if (lowSpeed == 1){
+      setMotorSpeed(70);
+    } else {
+      setMotorSpeed(100);
+    }
     int mappedValue;
     if (leftDistance < 10 && rightDistance < 10) {
       mappedValue = 90;
