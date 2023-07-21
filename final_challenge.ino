@@ -19,8 +19,8 @@ int orangeCount = 0;
 int blueCount = 0;
 unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
-
-const unsigned long blockDelay = 2000;
+unsigned long previousRedGreenBlockTime = 0;
+const unsigned long blockDelay = 2000;  // Delay in milliseconds after detecting a block
 unsigned long stopTime = 0;
 
 int getDistance(int trigPin, int echoPin) {
@@ -36,93 +36,61 @@ int getDistance(int trigPin, int echoPin) {
   return distance;
 }
 
+void setMotorSpeed(int speed) {
+  analogWrite(enablePin, speed);
+}
+
 void setup() {
   pinMode(leftTrigPin, OUTPUT);
   pinMode(leftEchoPin, INPUT);
   pinMode(rightTrigPin, OUTPUT);
   pinMode(rightEchoPin, INPUT);
-  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT_PULLUP);  // Use internal pull-up resistor for the button
   servo.attach(servoPin);
   pinMode(in2, OUTPUT);
   pinMode(in1, OUTPUT);
-  pinMode(enablePin, OUTPUT);
-  Serial.begin(9600);
+  Serial.begin(9600);  // Initialize serial communication
   pixy.init();
-}
-
-int leftDistance = getDistance(leftTrigPin, leftEchoPin);
-int rightDistance = getDistance(rightTrigPin, rightEchoPin);
-
-void setMotorSpeed(int speed) {
-  analogWrite(enablePin, speed);
 }
 
 void followBlock(int signature) {
 
-  digitalWrite(in1, HIGH);
-  digitalWrite(in2, LOW);
+  int leftDistance = getDistance(leftTrigPin, leftEchoPin);
+  int rightDistance = getDistance(rightTrigPin, rightEchoPin);
   setMotorSpeed(200);
 
-  int servoAngle = 90;  // Default servo angle if signature is not detected
-
-  while (true) {
-    // Check if the signature is still detected
-    bool isSignatureDetected = false;
-    pixy.ccc.getBlocks();
-    int numBlocks = pixy.ccc.numBlocks;
-    int leftDistance = getDistance(leftTrigPin, leftEchoPin);
-    int rightDistance = getDistance(rightTrigPin, rightEchoPin);
-    Serial.print(leftDistance);
-    Serial.print(rightDistance);
-
-    for (int i = 0; i < numBlocks; i++) {
-      if (pixy.ccc.blocks[i].m_signature == signature) {
-        isSignatureDetected = true;
-      }
+  int servoAngle;
+  if (signature == 1) {
+    // Green block, calculate top right corner's x-coordinate
+    int topRightX = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width;
+    int targetX = 20; // Target x-coordinate for the green block
+    int error = targetX - topRightX;
+    if (error > 0 && error < 20) {
+      servoAngle = 90;
+    } else if (error >= -140 && error <= 0) {
+      servoAngle = map(error, -140, 0, 125, 110);
+    } else if (error < -140){
+      servoAngle = 125;
     }
-
-    if (signature == 1) {
-      // Green block, calculate top right corner's x-coordinate
-      int topRightX = pixy.ccc.blocks[i].m_x + pixy.ccc.blocks[i].m_width;
-
-      if (rightDistance < 10) {
-        servoAngle = 55;
-      } else if (topRightX >= 0 && topRightX < 40) {
-        servoAngle = 90;
-        break;
-      } else if (topRightX >= 40 && topRightX < 160) {
-        servoAngle = map(topRightX, 40, 160, 110, 125);
-      } else if (topRightX > 160) {
-        servoAngle = 125;
-      }
-    } else {
-      // Red block, calculate top left corner's x-coordinate
-      int topLeftX = pixy.ccc.blocks[i].m_x;
-
-      if (leftDistance < 10) {
-        servoAngle = 125;
-      } else if (topLeftX >= 270 && topLeftX <= 330) {
-        servoAngle = 90;
-        break;
-      } else if (topLeftX >= 160 && topLeftX < 270) {
-        servoAngle = map(topLeftX, 160, 270, 55, 70);
-      } else if (topLeftX < 160) {
-        servoAngle = 55;
-      }
+  } else {
+    // Red block, calculate top left corner's x-coordinate
+    int targetX = 300; // Target x-coordinate for the red block
+    int error = targetX - pixy.ccc.blocks[i].m_x;
+    if (error > -20 && error < 0) {
+      servoAngle = 90;
+    } else if (error >= 0 && error <= 140) {
+      servoAngle = map(error, 0, 140, 70, 55);
+    } else if (error > 140){
+      servoAngle = 55;
     }
-
-    if (!isSignatureDetected) {
-      break;  // Exit the while loop if the signature is not detected
-    }
-
-    servo.write(servoAngle);
-    delay(50);
-    Serial.println("followBlock void");
   }
-}
 
-void followBlock_condition(int signature) {
-
+  if (leftDistance < 10) {
+    servoAngle = 125;
+  } else if (rightDistance < 10) {
+    servoAngle = 55;
+  }
+  servo.write(servoAngle);
 }
 
 void loop() {
@@ -130,48 +98,44 @@ void loop() {
     if (digitalRead(buttonPin) == LOW) {
       isStarted = true;
     }
-    return;
+    return;  // Skip the rest of the loop until the button is pressed
   }
 
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
-  setMotorSpeed(255);
+  setMotorSpeed(200);
   int leftDistance = getDistance(leftTrigPin, leftEchoPin);
   int rightDistance = getDistance(rightTrigPin, rightEchoPin);
   int difference = leftDistance - rightDistance;
-  
+
   pixy.ccc.getBlocks();
   int numBlocks = pixy.ccc.numBlocks;
 
- // Variables to track red/green blocks
+  // Variables to track red/green blocks
   int redGreenCount = 0;
   int redGreenArea[2] = {0, 0};
   int redGreenCenter[2] = {0, 0};
 
   for (int i = 0; i < numBlocks; i++) {
     if (pixy.ccc.blocks[i].m_signature == 2) {
-      if (pixy.ccc.blocks[i].m_y >= 100 ) {
-        unsigned long currentOrangeBlockTime = millis();
-        int orangeDelay = currentOrangeBlockTime - previousOrangeBlockTime;
-        if (orangeDelay > blockDelay) {
-          orangeCount++;
-          previousOrangeBlockTime = currentOrangeBlockTime;
-          Serial.print("orangeCount = ");
-          Serial.println(orangeCount);
-          Serial.print('\n');
-        }
-      } 
+      unsigned long currentOrangeBlockTime = millis();
+      int orangeDelay = currentOrangeBlockTime - previousOrangeBlockTime;
+      if (orangeDelay > blockDelay) {
+        orangeCount++;
+        previousOrangeBlockTime = currentOrangeBlockTime;
+        Serial.print("orangeCount = ");
+        Serial.println(orangeCount);
+        Serial.print('\n');
+      }
     } else if (pixy.ccc.blocks[i].m_signature == 5) {
-      if (pixy.ccc.blocks[i].m_y >= 100) {
-        unsigned long currentBlueBlockTime = millis();
-        int blueDelay = currentBlueBlockTime - previousBlueBlockTime;
-        if (blueDelay > blockDelay) {
-          blueCount++;
-          previousBlueBlockTime = currentBlueBlockTime;
-          Serial.print("blueCount = ");
-          Serial.println(blueCount);
-          Serial.print('\n');
-        }
+      unsigned long currentBlueBlockTime = millis();
+      int blueDelay = currentBlueBlockTime - previousBlueBlockTime;
+      if (blueDelay > blockDelay) {
+        blueCount++;
+        previousBlueBlockTime = currentBlueBlockTime;
+        Serial.print("blueCount = ");
+        Serial.println(blueCount);
+        Serial.print('\n');
       }
     } else if (pixy.ccc.blocks[i].m_signature == 1 || pixy.ccc.blocks[i].m_signature == 4) {
       // Red or green block detected
@@ -199,49 +163,52 @@ void loop() {
   if (redGreenCount == 1) {
     if (redGreenArea[0] > 750) {
       followBlock(pixy.ccc.blocks[i].m_signature);
-      return;
-    } else if (redGreenArea[0] > 200) {
+    } else {
+      if (leftDistance < 20) {
+        int servoAngle = 125;
+      } else if (rightDistance < 20) {
+        int servoAngle = 55;
+      } else {
       int servoAngle = map(redGreenCenter[0], 0, 320, 50, 130);
       servo.write(servoAngle);
+      }
     }
   } else if (redGreenCount == 2) {
     if (redGreenArea[0] > redGreenArea[1]) {
       if (redGreenArea[0] > 750) {
         followBlock(pixy.ccc.blocks[i].m_signature);
-        return;
-      } else if (redGreenArea[0] > 200) {
+      } else {
+        if (leftDistance < 20) {
+          int servoAngle = 125;
+        } else if (rightDistance < 20) {
+          int servoAngle = 55;
+        } else {
         int servoAngle = map(redGreenCenter[0], 0, 320, 50, 130);
         servo.write(servoAngle);
+        }
       }
     } else {
       if (redGreenArea[1] > 750) {
         followBlock(pixy.ccc.blocks[i].m_signature);
-        return;
-      } else if (redGreenArea[1] > 300) {
-        int servoAngle = map(redGreenCenter[1], 0, 320, 50, 130);
+      } else {
+        if (leftDistance < 20) {
+          int servoAngle = 125;
+        } else if (rightDistance < 20) {
+          int servoAngle = 55;
+        } else { 
+          int servoAngle = map(redGreenCenter[1], 0, 320, 50, 130);
         servo.write(servoAngle);
+        }
       }
     }
   } else {
-
-    Serial.print("left distance:" );
-    Serial.print(leftDistance);
-    Serial.print("right distance: ");
-    Serial.println(rightDistance);
-    
     int mappedValue;
-    if (leftDistance < 10 && rightDistance < 10){
-      mappedValue = 90;
-    } else if (leftDistance < 10) {
-      mappedValue = 125;
-    } else if (rightDistance < 10) {
-      mappedValue = 55;
-    } else if (difference < -45) {
+    if (difference < -45) {
       mappedValue = 125;
     } else if (difference > 45) {
       mappedValue = 55;
-    //} else if (difference > -10 && difference < 10) {
-    //  mappedValue = 90;
+    } else if (difference > -10 && difference < 10) {
+      mappedValue = 90;
     } else {
       mappedValue = map(difference, -45, 45, 125, 55);
     }
