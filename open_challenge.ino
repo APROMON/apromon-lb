@@ -1,3 +1,8 @@
+// OPEN CHALLENGE
+
+
+// include libraries and define components pins
+
 #include <Pixy2.h>
 #include <Servo.h>
 
@@ -14,16 +19,19 @@ const int in1 = 4;
 const int enablePin = 5;
 
 Servo servo;
+
+// define necessary variables for future calculations
+
 boolean isStarted = false;
 int orangeCount = 0;
 int blueCount = 0;
 int speed;
 unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
-const unsigned long blockDelay = 1250;  // Delay in milliseconds after detecting a block
+const unsigned long blockDelay = 1250;
 unsigned long stopTime = 0;
 
-
+// define getting the distance from an ultrasonic sensor
 int getDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -37,11 +45,13 @@ int getDistance(int trigPin, int echoPin) {
   return distance;
 }
 
+// define setting the DC motor's speed
 void setMotorSpeed(int speed) {
   analogWrite(enablePin, speed);
 }
 
 void setup() {
+  // defining each sensor's role (input/output)
   pinMode(leftTrigPin, OUTPUT);
   pinMode(leftEchoPin, INPUT);
   pinMode(rightTrigPin, OUTPUT);
@@ -55,7 +65,6 @@ void setup() {
 }
 
 void loop() {
-//  servo.write(130);
   if (!isStarted) {
     if (digitalRead(buttonPin) == LOW) {
       isStarted = true;
@@ -63,10 +72,12 @@ void loop() {
     return;  // Skip the rest of the loop until the button is pressed
   }
 
+// get information from the pixy cam
   pixy.ccc.getBlocks();
   int numBlocks = pixy.ccc.numBlocks;
   speed = 100;
 
+// establish some calculations and take more information of the detected blocks from the camera
   for (int i = 0; i < numBlocks; i++) {
     if (pixy.ccc.blocks[i].m_signature == 2) {
       speed = 120;
@@ -93,7 +104,7 @@ void loop() {
     }
   }
 
-
+// stop the car/program once the camera has detected 12 orange or blue lines (each lap has 4 lines and the robot has to accomplish 3 laps, therefore 4x3 = 12 lines need to be detected)
  if (orangeCount >= 12 || blueCount >= 12) {
   if (stopTime == 0) {
     stopTime = millis() + 1000;
@@ -106,9 +117,9 @@ void loop() {
   }
  }
 
+// Set motor direction and read sensor distances
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
-  //setMotorSpeed(speed);
   int leftDistance = getDistance(leftTrigPin, leftEchoPin);
   int rightDistance = getDistance(rightTrigPin, rightEchoPin);
   int difference = leftDistance - rightDistance;
@@ -122,6 +133,7 @@ void loop() {
   Serial.println(" cm");
   Serial.print('\n');
 
+// move the robot based on the difference between the two left and right ultrasonic sensors
   int mappedValue;
   if (difference < -45) {
     mappedValue = 170;
@@ -134,19 +146,6 @@ void loop() {
   }
 
   setMotorSpeed(speed);
-//  int speed;
-//  if (mappedValue >= 115 && mappedValue <= 145) {
-//    setMotorSpeed(80);
-//  } else {
-//    setMotorSpeed(150);
-//  } else if (mappedValue <= 115) {
-//    speed = map(mappedValue, 115, 130, 200, 225);
-//    setMotorSpeed(speed);
-//  } else {
-//    setMotorSpeed(255);
-//  }
 
   servo.write(mappedValue);
-//  Serial.print("Steering angle:");
-//  Serial.println(mappedValue);
 }
