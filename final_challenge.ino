@@ -1,3 +1,8 @@
+// OBSTACLE
+
+
+// include libraries and define components pins
+
 #include <Pixy2.h>
 #include <Servo.h>
 
@@ -16,7 +21,8 @@ const int in2 = 3;
 const int in1 = 4;
 const int enablePin = 5;
 
-const unsigned long blockDelay = 4000;  // Delay in milliseconds after detecting a block
+// define necessary variables for future calculations
+const unsigned long blockDelay = 4000;
 
 int leftDistance, rightDistance, frontDistance;
 int redCenter, greenCenter, topRightX, topLeftX, Center;
@@ -33,6 +39,7 @@ unsigned long previousOrangeBlockTime = 0;
 unsigned long previousBlueBlockTime = 0;
 unsigned long stopTime = 0;
 
+// define getting the distance from an ultrasonic sensor
 int getDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -46,10 +53,12 @@ int getDistance(int trigPin, int echoPin) {
   return distance;
 }
 
+// define setting the DC motor's speed
 void setMotorSpeed(int speed) {
   analogWrite(enablePin, speed);
 }
 
+// define the servo motor's input value by calculating the red/green block's position using the pixy v2.1 camera when the robot is close to it 
 void followBlock(int signature) {
   int servoAngle = 130;
   int difference = leftDistance - rightDistance;
@@ -87,6 +96,7 @@ void followBlock(int signature) {
   servo.write(servoAngle);
 }
 
+// define the servo motor's input value by calculating the red/green block's position using the pixy v2.1 camera when the robot is far from it 
 void followCenter(int signature) {
   int servoAngle;
 
@@ -111,6 +121,7 @@ void followCenter(int signature) {
 }
 
 void setup() {
+  // defining each sensor's role (input/output)
   pinMode(leftTrigPin, OUTPUT);
   pinMode(leftEchoPin, INPUT);
   pinMode(rightTrigPin, OUTPUT);
@@ -153,6 +164,7 @@ void loop() {
   Serial.print(frontDistance);
   Serial.print('\n');
 
+// get information for the pixy cam and define more values than need to be resetted to 0 when the loop repeats
   pixy.ccc.getBlocks();
   int numBlocks = pixy.ccc.numBlocks;
 
@@ -164,12 +176,9 @@ void loop() {
   int greenHeight = 0;
   int redBlockHeight = 0;
   int greenBlockHeight = 0;
-//  int servoSteering;
   int servoAngle = 0;
-//  int mappedValue = 0;
 
-
-
+// establish some calculations and take more information of the detected blocks from the camera
   for (int i = 0; i < numBlocks; i++) {
     int blockSignature = pixy.ccc.blocks[i].m_signature;
     int blockHeight = pixy.ccc.blocks[i].m_y + pixy.ccc.blocks[i].m_height;
@@ -219,6 +228,7 @@ void loop() {
     }
   }
 
+// stop the car/program once the camera has detected 12 orange or blue lines (each lap has 4 lines and the robot has to accomplish 3 laps, therefore 4x3 = 12 lines need to be detected)
   if (orangeCount >= 12 || blueCount >= 12) {
     if (stopTime == 0) {
       stopTime = millis() + 1500;
@@ -232,10 +242,10 @@ void loop() {
     }
   }
 
+// move the car based on the detedcted blocks positions
   if (redGreenCount > 0) {
     if (redHeight > greenHeight) {
       if (redHeight > 100) {
-//        setMotorSpeed(120);
         followBlock(1);
         direction = 1;
       } else {
@@ -243,13 +253,13 @@ void loop() {
       }
     } else {
       if (greenHeight > 100) {
-//        setMotorSpeed(135);
         followBlock(4);
         direction = 4;
       } else {
         followCenter(4);
       }
     }
+    // adjust the car if it has encountered a wall after passing a green block
   } else if (direction == 4 && frontDistance < 7 && frontDistance != 0) {
     detectedBlock = false;
     centeredBlock = false;
@@ -259,7 +269,6 @@ void loop() {
       int numBlocks = pixy.ccc.numBlocks;
       digitalWrite(in1, LOW);
       digitalWrite(in2, HIGH);
-//      setMotorSpeed(120);
       servo.write(85);
       for (int i = 0; i < numBlocks; i++) {
         if (pixy.ccc.blocks[i].m_signature == 4) {
@@ -284,6 +293,7 @@ void loop() {
         break;
       }
     }
+    // adjust the car if it has encountered a wall after passing a red block
   } else if (direction == 1 && frontDistance <= 7 && frontDistance != 0) {
     detectedBlock = false;
     centeredBlock = false;
@@ -293,7 +303,6 @@ void loop() {
       int numBlocks = pixy.ccc.numBlocks;
       digitalWrite(in1, LOW);
       digitalWrite(in2, HIGH);
-//      setMotorSpeed(120);
       servo.write(165);
       for (int i = 0; i < numBlocks; i++) {
         if (pixy.ccc.blocks[i].m_signature == 1) {
@@ -318,13 +327,8 @@ void loop() {
         break;
       }
     }
+    // move the robot based on the difference between the two left and right ultrasonic sensors
   } else {
-//    if (lowSpeed == 1){
-//      setMotorSpeed(100);
-//    } else {
-//      setMotorSpeed(80);
-//   }
-//    int mappedValue;
     if (leftDistance < 10 && rightDistance < 10) {
       servoAngle = 130;
     } else if (leftDistance < 5) {
@@ -343,29 +347,8 @@ void loop() {
   
   }
 
-//  int speed;
-//  if (servoAngle > 130) {
-//    speed = map(servoAngle, 130, 170, 90, 110);
-//  } else if (servoAngle <= 130) {
-//    speed = map(servoAngle, 80, 130, 110, 90);
-//  }
-
   setMotorSpeed(90);
 
   delay(100);
 
 }
-
-//  if (servoAngle == 0) {
-//    servoSteering = mappedValue;
-//  } else {
-//    servoSteering = servoAngle;
-//  }
-
-//  int speed;
-//  if (servoSteering > 130) {
-//    speed = map(servoSteering, 130, 165, 60, 130);
-//  } else {
-//    speed = map(servoSteering, 85, 130, 130, 60);
-//  }
-//  setMotorSpeed(speed);
